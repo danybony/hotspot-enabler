@@ -79,6 +79,12 @@ class MainActivity : AppCompatActivity() {
         }
         settingPermission()
         locationsPermission()
+
+        if (BuildConfig.DEBUG) {
+            findViewById<View>(R.id.version).setOnClickListener {
+                createHotspotEnabler(this).enableTethering()
+            }
+        }
     }
 
     private fun settingPermission() {

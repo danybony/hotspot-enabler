@@ -17,10 +17,11 @@ class BtReceiver : BroadcastReceiver() {
         if (selectedDevicePreferences.getSelectedDeviceMacAddress() != connectedDevice?.address) {
             return
         }
+        val hotspotEnabler = createHotspotEnabler(context)
         if (intent.action == "android.bluetooth.device.action.ACL_CONNECTED") {
-            enableTethering(context)
+            hotspotEnabler.enableTethering()
         } else {
-            disableTethering(context)
+            hotspotEnabler.disableTethering()
         }
     }
 }

@@ -3,6 +3,8 @@ package net.bonysoft.hotspotenabler
 import android.content.Context
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
+import android.os.Build
+import com.crashlytics.android.Crashlytics
 import java.lang.reflect.Method
 
 class NougatHotspotEnabler(private val context: Context) : HotspotEnabler {
@@ -16,7 +18,8 @@ class NougatHotspotEnabler(private val context: Context) : HotspotEnabler {
     }
 
     private fun setTetheringStatus(context: Context, enabled: Boolean) {
-        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiManager =
+            context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
         try {
             val method: Method = wifiManager.javaClass.getMethod(
@@ -26,7 +29,8 @@ class NougatHotspotEnabler(private val context: Context) : HotspotEnabler {
             )
             method.invoke(wifiManager, null, enabled) // true to enable, false to disable
         } catch (e: NoSuchMethodException) {
-            // WiFi tethering is blocked.
+            Crashlytics.log("${NougatHotspotEnabler::class.java.simpleName}. Error while setting tethering to:$enabled, SDK:${Build.VERSION.SDK_INT}")
+            Crashlytics.logException(e)
         }
     }
 

@@ -2,9 +2,11 @@ package net.bonysoft.hotspotenabler
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.os.Build
 import android.os.Handler
 import android.util.Log
 import com.android.dx.stock.ProxyBuilder
+import com.crashlytics.android.Crashlytics
 import java.io.IOException
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
@@ -24,7 +26,7 @@ class QHotspotEnabler(private val context: Context) : HotspotEnabler {
         val outputDir = context.getCodeCacheDir()
         val proxy: Any
         try {
-            proxy = ProxyBuilder.forClass(classOnStartTetheringCallback())
+            proxy = ProxyBuilder.forClass(classOnStartTetheringCallback(methodName))
                 .dexCache(outputDir).handler(object : InvocationHandler {
                     @Throws(Throwable::class)
                     override operator fun invoke(
@@ -42,7 +44,7 @@ class QHotspotEnabler(private val context: Context) : HotspotEnabler {
 
                 }).build()
         } catch (e: IOException) {
-            e.printStackTrace()
+            logToCrashlytics(e, methodName)
             return
         }
 
@@ -56,7 +58,7 @@ class QHotspotEnabler(private val context: Context) : HotspotEnabler {
                     methodName,
                     Int::class.javaPrimitiveType,
                     Boolean::class.javaPrimitiveType,
-                    classOnStartTetheringCallback(),
+                    classOnStartTetheringCallback(methodName),
                     Handler::class.java
                 )
                 if (method == null) {
@@ -78,24 +80,30 @@ class QHotspotEnabler(private val context: Context) : HotspotEnabler {
                 return
             }
         } catch (e: NoSuchMethodException) {
-            e.printStackTrace()
+            logToCrashlytics(e, methodName)
         } catch (e: IllegalAccessException) {
-            e.printStackTrace()
+            logToCrashlytics(e, methodName)
         } catch (e: InvocationTargetException) {
-            e.printStackTrace()
+            logToCrashlytics(e, methodName)
         }
 
         return
     }
 
-    private fun classOnStartTetheringCallback(): Class<*>? {
+    private fun classOnStartTetheringCallback(methodName: String): Class<*>? {
         try {
             return Class.forName("android.net.ConnectivityManager\$OnStartTetheringCallback")
         } catch (e: ClassNotFoundException) {
-            e.printStackTrace()
+            logToCrashlytics(e, methodName)
         }
 
         return null
+    }
+
+    private fun logToCrashlytics(e: Exception, methodName: String) {
+        e.printStackTrace()
+        Crashlytics.log("${QHotspotEnabler::class.java.simpleName}. Error while setting tethering to:$methodName, SDK:${Build.VERSION.SDK_INT}")
+        Crashlytics.logException(e)
     }
 
 }

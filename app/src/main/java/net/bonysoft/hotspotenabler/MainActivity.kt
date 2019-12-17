@@ -34,6 +34,8 @@ class MainActivity : AppCompatActivity() {
     private var mLocationPermission = false
     private var mSettingPermission = true
 
+    private var hoptspotEnabled = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -82,7 +84,14 @@ class MainActivity : AppCompatActivity() {
 
         if (BuildConfig.DEBUG) {
             findViewById<View>(R.id.version).setOnClickListener {
-                createHotspotEnabler(this).enableTethering()
+                createHotspotEnabler(this).let {
+                    if (hoptspotEnabled) {
+                        it.enableTethering()
+                    } else {
+                        it.disableTethering()
+                    }
+                }
+                hoptspotEnabled = !hoptspotEnabled
             }
         }
     }

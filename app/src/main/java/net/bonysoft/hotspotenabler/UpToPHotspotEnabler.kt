@@ -7,7 +7,7 @@ import android.os.Build
 import com.crashlytics.android.Crashlytics
 import java.lang.reflect.Method
 
-class NougatHotspotEnabler(private val context: Context) : HotspotEnabler {
+class UpToPHotspotEnabler(private val context: Context) : HotspotEnabler {
 
     override fun enableTethering() {
         setTetheringStatus(context, true)
@@ -29,7 +29,7 @@ class NougatHotspotEnabler(private val context: Context) : HotspotEnabler {
             )
             method.invoke(wifiManager, null, enabled) // true to enable, false to disable
         } catch (e: NoSuchMethodException) {
-            Crashlytics.log("${NougatHotspotEnabler::class.java.simpleName}. Error while setting tethering to:$enabled, SDK:${Build.VERSION.SDK_INT}")
+            Crashlytics.log("${UpToPHotspotEnabler::class.java.simpleName}. Error while setting tethering to:$enabled, SDK:${Build.VERSION.SDK_INT}")
             Crashlytics.logException(e)
         }
     }

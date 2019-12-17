@@ -15,10 +15,7 @@ fun createHotspotEnabler(context: Context): HotspotEnabler =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
             QHotspotEnabler(context)
         }
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> {
-            NougatHotspotEnabler(context)
-        }
         else -> {
-            error("Android version not yet supported")
+            UpToPHotspotEnabler(context)
         }
     }

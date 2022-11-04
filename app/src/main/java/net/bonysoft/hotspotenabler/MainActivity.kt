@@ -1,6 +1,8 @@
 package net.bonysoft.hotspotenabler
 
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
+import android.Manifest.permission.BLUETOOTH_CONNECT
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -23,6 +25,7 @@ import androidx.preference.PreferenceManager
 
 const val MY_PERMISSIONS_MANAGE_WRITE_SETTINGS = 100
 const val MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 69
+const val MY_PERMISSIONS_REQUEST_BLUETOOTH_CONNECT = 70
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,30 +36,18 @@ class MainActivity : AppCompatActivity() {
     }
     private var mLocationPermission = false
     private var mSettingPermission = true
-
+    private var mBluetoothConnectPermission = true
     private var hoptspotEnabled = false
+
+    private lateinit var spinner: Spinner
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         findViewById<TextView>(R.id.version).text =
             getString(R.string.footer_version_format, BuildConfig.VERSION_NAME)
-        val spinner = findViewById<Spinner>(R.id.devices_spinner)
-        val bluetoothDevices = (BluetoothAdapter.getDefaultAdapter()?.bondedDevices
-            ?.map { BluetoothDeviceNameWrapper(it) }
-            ?.sortedBy { it.toString() }
-            ?: emptyList())
-            .toMutableList()
-            .apply { add(0, BluetoothDeviceNameWrapper.NoneSelected) }
-            .toTypedArray()
+        spinner = findViewById<Spinner>(R.id.devices_spinner)
 
-        val adapter = ArrayAdapter<BluetoothDeviceNameWrapper>(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            bluetoothDevices
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
         spinner.setPromptId(R.string.spinner_prompt)
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -74,13 +65,10 @@ class MainActivity : AppCompatActivity() {
             }
 
         }
-        selectedDevicePreferences.getSelectedDeviceMacAddress()?.let { address ->
-            spinner.setSelection(bluetoothDevices.indexOfFirst {
-                it.address == address
-            })
-        }
+
         settingPermission()
         locationsPermission()
+        bluetoothPermission()
 
         if (BuildConfig.DEBUG) {
             findViewById<View>(R.id.version).setOnClickListener {
@@ -96,6 +84,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun updateBluetoothDevices() {
+        val bluetoothDevicesWrappers = (BluetoothAdapter.getDefaultAdapter()?.bondedDevices
+            ?.map { BluetoothDeviceNameWrapper(it) }
+            ?.sortedBy { it.toString() }
+            ?: emptyList())
+            .toMutableList()
+            .apply { add(0, BluetoothDeviceNameWrapper.NoneSelected) }
+
+
+        val adapter = ArrayAdapter<BluetoothDeviceNameWrapper>(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            bluetoothDevicesWrappers
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+
+        selectedDevicePreferences.getSelectedDeviceMacAddress()?.let { address ->
+            spinner.setSelection(bluetoothDevicesWrappers.indexOfFirst {
+                it.address == address
+            })
+        }
+    }
+
     private fun settingPermission() {
         mSettingPermission = true
 
@@ -108,7 +121,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun locationsPermission() {
         mLocationPermission = true
@@ -138,6 +150,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun bluetoothPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            updateBluetoothDevices()
+            return
+        }
+        mBluetoothConnectPermission = true
+        if (ContextCompat.checkSelfPermission(
+                this,
+                BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            updateBluetoothDevices()
+        } else {
+            mBluetoothConnectPermission = false
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, BLUETOOTH_CONNECT)) {
+
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+
+            } else {
+
+                // No explanation needed; request the permission
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(BLUETOOTH_CONNECT),
+                    MY_PERMISSIONS_REQUEST_BLUETOOTH_CONNECT
+                )
+            }
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         // Check which request we're responding to
         if (requestCode == MY_PERMISSIONS_MANAGE_WRITE_SETTINGS) {
@@ -145,6 +189,7 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == Activity.RESULT_OK) {
                 mSettingPermission = true
                 if (!mLocationPermission) locationsPermission()
+                if (!mBluetoothConnectPermission) bluetoothPermission()
             } else {
                 settingPermission()
             }
@@ -155,8 +200,20 @@ class MainActivity : AppCompatActivity() {
             if (resultCode == Activity.RESULT_OK) {
                 mLocationPermission = true
                 if (!mSettingPermission) settingPermission()
+                if (!mBluetoothConnectPermission) bluetoothPermission()
             } else {
                 locationsPermission()
+            }
+        }
+
+        if (requestCode == MY_PERMISSIONS_REQUEST_BLUETOOTH_CONNECT) {
+            // Make sure the request was successful
+            if (resultCode == Activity.RESULT_OK) {
+                mBluetoothConnectPermission = true
+                if (!mSettingPermission) settingPermission()
+                if (!mLocationPermission) locationsPermission()
+            } else {
+                bluetoothPermission()
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
